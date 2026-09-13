@@ -242,6 +242,25 @@ body{
 <div id="toast"></div>
 <!-- 背景音乐：优先加载同目录 bgm.mp3（用户自备合法音源）；不存在时自动降级为内置合成旋律 -->
 <audio id="bgmFile" src="bgm.mp3" loop preload="auto"></audio>
+<script>
+/* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
+   但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
+(function () {
+  var VER = '0.2.1';
+  try {
+    var seen = localStorage.getItem('hongyu_ver');
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.v && j.v !== seen) {
+          localStorage.setItem('hongyu_ver', j.v);
+          if (seen) location.reload();   // 首次记录不刷，已有旧记录且版本变了才强刷
+        }
+      })
+      .catch(function () {});
+  } catch (e) {}
+})();
+</script>
 
 <script>
 'use strict';
