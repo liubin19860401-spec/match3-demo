@@ -62,22 +62,23 @@ body{
 
 /* ---------- 关卡选择 ---------- */
 .ls-title{font-size:20px;font-weight:700;letter-spacing:.1em;text-align:center;margin:6px 0 0}
-#levelList{display:flex;flex-direction:column;gap:10px}
+#levelList{display:grid;grid-template-columns:repeat(2,1fr);gap:10px} /* 100 关双列网格，单列会太长 */
+@media (max-width:340px){#levelList{grid-template-columns:1fr}}
 .lv-card{
-  display:flex;align-items:center;gap:14px;text-align:left;
+  display:flex;align-items:center;gap:10px;text-align:left;
   background:#fff;border:1px solid #d9d3c7;border-radius:4px;
-  padding:14px 16px;font-family:inherit;cursor:pointer;touch-action:manipulation;
+  padding:10px 12px;font-family:inherit;cursor:pointer;touch-action:manipulation;
   transition:transform 120ms ease;
 }
 .lv-card:active{transform:scale(.98)}
 .lv-num{
-  font-family:ui-monospace,Consolas,Menlo,monospace;font-size:22px;font-weight:700;
-  width:52px;height:52px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-family:ui-monospace,Consolas,Menlo,monospace;font-size:19px;font-weight:700;
+  width:44px;height:44px;border-radius:4px;display:flex;align-items:center;justify-content:center;
   background:#1c1b1a;color:#f4f1ea;flex:none;
 }
 .lv-info{flex:1;min-width:0}
-.lv-name{font-size:16px;font-weight:600}
-.lv-meta{font-size:12px;color:#8a8276;margin-top:3px;font-family:ui-monospace,Consolas,Menlo,monospace}
+.lv-name{font-size:15px;font-weight:600}
+.lv-meta{font-size:11px;color:#8a8276;margin-top:2px;font-family:ui-monospace,Consolas,Menlo,monospace}
 .lv-lock{flex:none;width:26px;height:26px;color:#b3aa9c}
 .lv-card.locked{background:#eeebe3;border-color:#e0dcd2;cursor:not-allowed}
 .lv-card.locked .lv-num{background:#c9c2b4;color:#f4f1ea}
@@ -268,14 +269,15 @@ const COLOR_HEX = ['#e5484d','#ffb224','#30a46c','#0091ff','#8e4ec6']; // 与 .f
 const BOMB_DROP_CHANCE = 0.25; // 连击波（第2波起）补位新块生成炸弹的概率
 const TIME_LOW = 5;            // 倒计时剩余 ≤ 此值时红色告警
 
-/* ---------------- 关卡配置（用户定稿） ---------------- */
-const LEVELS = [
-  { time: 30, moves: 20, target: 500  },
-  { time: 30, moves: 20, target: 800  },
-  { time: 45, moves: 20, target: 1100 },
-  { time: 45, moves: 20, target: 1500 },
-  { time: 60, moves: 25, target: 2000 },
-];
+/* ---------------- 关卡配置（用户定稿） ----------------
+ * 共 100 关：每关倒计时 60 秒、25 步（与原第 5 关一致），
+ * 目标分从 2000 起每关递增 2000（第 N 关 = 2000 × N，第 100 关 = 20 万分）。 */
+const LEVEL_COUNT = 100;
+const LEVELS = Array.from({ length: LEVEL_COUNT }, (_, i) => ({
+  time: 60,
+  moves: 25,
+  target: (i + 1) * 2000,
+}));
 
 /* ---------------- 游戏状态 ---------------- */
 let grid = [];        // grid[r][c] = 方块对象 {color, special, r, c, el, face}；special='bomb' 为炸弹
@@ -415,7 +417,7 @@ const SAVE_KEY = 'hongyu_match3_progress_v1';
 function loadProgress() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { const p = JSON.parse(raw); if (p && p.unlocked >= 1) progress.unlocked = Math.min(5, Math.max(1, p.unlocked)); }
+    if (raw) { const p = JSON.parse(raw); if (p && p.unlocked >= 1) progress.unlocked = Math.min(LEVEL_COUNT, Math.max(1, p.unlocked)); }
   } catch (e) {}
 }
 function saveProgress() {
@@ -442,7 +444,7 @@ function renderLevels() {
       '<span class="lv-num">' + (i + 1) + '</span>' +
       '<span class="lv-info">' +
         '<span class="lv-name">第 ' + (i + 1) + ' 关</span>' +
-        '<span class="lv-meta">目标 ' + lv.target + ' 分 · ' + lv.time + ' 秒 · ' + lv.moves + ' 步</span>' +
+        '<span class="lv-meta">目标 ' + lv.target + ' 分</span>' +
       '</span>' +
       (cleared ? '<span class="lv-pass">已通关</span>' : '') +
       (unlocked ? '' : '<svg class="lv-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>');
@@ -500,7 +502,7 @@ function endLevel(win) {
   clearSelection();
   if (win) {
     sfx.win();
-    if (curLevel + 1 < LEVELS.length) progress.unlocked = Math.max(progress.unlocked, curLevel + 2); // 解锁下一关
+    progress.unlocked = Math.max(progress.unlocked, Math.min(LEVELS.length, curLevel + 2)); // 解锁下一关（上限 100）
     saveProgress();
   } else {
     sfx.fail();
@@ -511,7 +513,8 @@ function endLevel(win) {
 /* 结算浮层：右上角 ✕ 关闭回关卡选择；下方按钮按胜负显示 */
 function showOverlay(win) {
   const lv = LEVELS[curLevel];
-  ovTitle.textContent = win ? '过关啦！' : '差一点点';
+  const finalWin = win && curLevel === LEVELS.length - 1;   // 第 100 关胜利 = 全部通关
+  ovTitle.textContent = finalWin ? '全部通关！' : (win ? '过关啦！' : '差一点点');
   ovTitle.className = 'ov-title ' + (win ? 'win' : 'lose');
   ovData.innerHTML = '第 ' + (curLevel + 1) + ' 关 · 得分 ' + score + ' / 目标 ' + lv.target +
     '<br>剩余 ' + timeLeft + ' 秒 · 剩余 ' + movesLeft + ' 步';
