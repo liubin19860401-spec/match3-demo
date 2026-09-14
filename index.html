@@ -306,7 +306,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.2';
+  var VER = '0.3.4';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -430,6 +430,17 @@ let bgmTimer = null;      // 合成 BGM 音序器
 const BGM_STEP_MS = 340;  // BGM 每步时长
 /* 关卡背景池：每关随机一张（bg1~bg5.jpg） */
 const BG_COUNT = 5;
+/* 背景预加载：进关卡列表时就用 Image 对象拉取全部 5 张，
+   浏览器会缓存，之后每关切换背景零等待、不闪加载 */
+const bgCache = [];
+function preloadBackgrounds() {
+  if (bgCache.length) return;              // 只预加载一次
+  for (let i = 1; i <= BG_COUNT; i++) {
+    const img = new Image();
+    img.src = 'bg' + i + '.jpg';
+    bgCache.push(img);                     // 持有引用，防垃圾回收清掉缓存
+  }
+}
 const BGM_MELODY = [      // 原创轻快旋律（A 大调五声音阶，度数，-1 为休止）
   0,4,7,9, 7,4,2,4,   0,4,7,9, 12,9,7,4,
   2,5,9,12, 9,5,2,5,  4,7,12,14, 12,7,4,2,
@@ -567,7 +578,7 @@ function renderLevels() {
       '</span>' +
       (cleared ? '<span class="lv-pass">已通关</span>' : '') +
       (unlocked ? '' : '<svg class="lv-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>');
-    if (unlocked) btn.addEventListener('click', () => { initAudio(); startLevel(i); });
+    if (unlocked) btn.addEventListener('click', () => { initAudio(); preloadBackgrounds(); startLevel(i); });
     levelList.appendChild(btn);
   });
 }
@@ -701,7 +712,9 @@ function pickSafeColor(r, c) {
 /* 按屏宽计算方块尺寸并落位（旋转/缩放窗口时也会重新调用） */
 function layout() {
   const w = (board.parentElement && board.parentElement.clientWidth) || 320;
-  tileSize = Math.floor((w - GAP * (COLS - 1)) / COLS);
+  /* 整体缩放系数 0.90：棋盘占屏 90%，四周留边衬托木框质感（用户定稿） */
+  const SCALE = 0.90;
+  tileSize = Math.floor(((w * SCALE) - GAP * (COLS - 1)) / COLS);
   const boardSize = tileSize * COLS + GAP * (COLS - 1);
   board.style.width = boardSize + 'px';
   board.style.height = boardSize + 'px';
@@ -1102,7 +1115,7 @@ function initEvents() {
   board.addEventListener('pointercancel', () => { gesture = null; });
   board.addEventListener('animationend', (e) => e.target.classList.remove('pop', 'shake'));
   $('restart').addEventListener('click', () => startLevel(curLevel));  // 重开当前关
-  $('btnStart').addEventListener('click', () => { initAudio(); renderLevels(); showScreen('levels'); playMenuBgm(); });   // 首次手势解锁音频并起封面 BGM
+  $('btnStart').addEventListener('click', () => { initAudio(); preloadBackgrounds(); renderLevels(); showScreen('levels'); playMenuBgm(); });   // 首次手势解锁音频+预加载背景+起封面 BGM
   $('backCover').addEventListener('click', () => { stopBgm(); showScreen('cover'); playMenuBgm(); });
   window.addEventListener('resize', layout);   // 旋转屏幕 / 改变窗口时重算尺寸
 }
