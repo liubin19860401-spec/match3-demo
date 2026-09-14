@@ -248,7 +248,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.2.4';
+  var VER = '0.2.5';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -290,14 +290,30 @@ const COLOR_HEX = ['#e5484d','#ffb224','#30a46c','#0091ff','#8e4ec6']; // 与 .f
 const BOMB_DROP_CHANCE = 0.25; // 连击波（第2波起）补位新块生成炸弹的概率
 const TIME_LOW = 5;            // 倒计时剩余 ≤ 此值时红色告警
 
-/* ---------------- 关卡配置（用户定稿） ----------------
- * 共 100 关：每关倒计时 60 秒、25 步（与原第 5 关一致），
- * 目标分以 800 为基础每关递增 500（第 N 关 = 800 + (N−1) × 500，第 100 关 = 50300 分）。 */
+/* ---------------- 关卡配置（用户定稿 v0.2.5 三维锚点） ----------------
+ * 共 100 关，三维度各自锚点线性插值：
+ *   倒计时：L1=60s → L40=120s → L100=300s（单局≤5分钟硬约束 ✓）
+ *   步数　：L1=12 → L10=25 封顶（恒 ≤100 ✓）
+ *   目标分：L1=250 → L30=3,000 → L60=5,000 → L100=6,500 登顶（选项二·可达终点）
+ * 锚点与设计稿 docs/difficulty-design-v3.html 同源（calc3.js）。 */
 const LEVEL_COUNT = 100;
+const lvInterp = (anchors, n, round) => {
+  if (n <= anchors[0][0]) return anchors[0][1];
+  for (let k = 1; k < anchors.length; k++) {
+    const [n1, v1] = anchors[k - 1], [n2, v2] = anchors[k];
+    if (n <= n2) return round(v1 + (v2 - v1) * (n - n1) / (n2 - n1));
+  }
+  return anchors[anchors.length - 1][1];
+};
+const rInt = (x) => Math.round(x);
+const r5 = (x) => Math.round(x / 5) * 5;
+const T_ANCHORS = [[1, 60], [10, 60], [40, 120], [100, 300]];       // 倒计时锚点
+const M_ANCHORS = [[1, 12], [10, 25]];                              // 步数锚点（封顶 25）
+const S_ANCHORS = [[1, 250], [30, 3000], [60, 5000], [100, 6500]];  // 目标分锚点
 const LEVELS = Array.from({ length: LEVEL_COUNT }, (_, i) => ({
-  time: 60,
-  moves: 25,
-  target: 800 + i * 500,
+  time: lvInterp(T_ANCHORS, i + 1, rInt),
+  moves: lvInterp(M_ANCHORS, i + 1, rInt),
+  target: lvInterp(S_ANCHORS, i + 1, r5),
 }));
 
 /* ---------------- 游戏状态 ---------------- */
