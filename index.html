@@ -151,6 +151,12 @@ body{
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);           /* 底部厚度感，纯 CSS */
   transition:transform 200ms ease,opacity 200ms ease;
 }
+/* 食物图标层：74% 大小居中叠印在色块上，带轻投影增强立体感 */
+.face::after{
+  content:'';position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);
+  width:74%;height:74%;background:var(--icon) center/contain no-repeat;
+  filter:drop-shadow(0 1.5px 2px rgba(0,0,0,.28));pointer-events:none;
+}
 .face.sel{outline:3px solid #1c1b1a;outline-offset:2px;transform:scale(1.07)}  /* 选中高亮 */
 .face.pop{animation:pop 240ms ease backwards}                                  /* 生成/重排弹出 */
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
@@ -184,12 +190,12 @@ body{
   background:#ffb224;border-radius:50%;box-shadow:0 0 6px 2px rgba(255,178,36,.65);
 }
 
-/* 5 色色板（与设计文档定稿一致） */
-.f0{background:#e5484d}  /* 红 */
-.f1{background:#ffb224}  /* 琥珀 */
-.f2{background:#30a46c}  /* 绿 */
-.f3{background:#0091ff}  /* 蓝 */
-.f4{background:#8e4ec6}  /* 紫 */
+/* 5 色色板（与设计文档定稿一致），--icon 为对应食物素材（图标按用户素材实际内容映射） */
+.f0{background:#e5484d;--icon:url(item0.png)}  /* 红 · 牛肉面 */
+.f1{background:#ffb224;--icon:url(item1.png)}  /* 琥珀 · 汉堡 */
+.f2{background:#30a46c;--icon:url(item2.png)}  /* 绿 · 冰饮 */
+.f3{background:#0091ff;--icon:url(item3.png)}  /* 蓝 · 榴莲 */
+.f4{background:#8e4ec6;--icon:url(item4.png)}  /* 紫 · 火锅 */
 
 /* ---------- 胜利/失败结算浮层 ---------- */
 .ov{position:fixed;inset:0;background:rgba(28,27,26,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px}
@@ -299,7 +305,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.0';
+  var VER = '0.3.1';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
