@@ -279,7 +279,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.2.9';
+  var VER = '0.2.9.1';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -380,8 +380,7 @@ const sfxClearAudio = $('sfxClear');  // 消除音效（xiaochu2）
 const sfxBoomAudio = $('sfxBoom');    // 爆炸音效（boom3）
 const gameBg = $('gameBg');
 const winFlash = $('winFlash');
-const winSub = $('winSub');        // 封面/菜单 BGM（依然爱你）
-const bgmGameAudio = $('bgmGame');    // 游戏内 BGM（烟花易冷）
+const winSub = $('winSub');
 
 /* ---------------- 小工具 ---------------- */
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -389,9 +388,10 @@ const randColor = () => Math.floor(Math.random() * COLOR_COUNT);
 const step = () => tileSize + GAP;   // 一个格子的总步长 = 块边长 + 间距
 
 function forEachTile(fn) {
+  if (!grid.length) return;   // 棋盘未初始化时（如首屏 resize 触发 layout）直接跳过
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c < COLS; c++)
-      if (grid[r][c]) fn(grid[r][c]);
+      if (grid[r] && grid[r][c]) fn(grid[r][c]);
 }
 
 /* ============================================================
