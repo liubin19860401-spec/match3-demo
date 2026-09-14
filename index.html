@@ -110,8 +110,12 @@ body{
 .hint{font-size:11px;color:#8a8276;text-align:center;margin:-4px 0 0}
 
 /* ---------- 棋盘 ---------- */
-#boardWrap{display:flex;justify-content:center}
-#board{position:relative;background:#e7e3d8;border-radius:4px;touch-action:none}  /* touch-action:none 禁掉浏览器手势，保证滑动交换灵敏 */
+#boardWrap{display:flex;justify-content:center;flex:1;align-items:center} /* 撑满剩余高度，让棋盘居中在背景上 */
+#board{position:relative;background:rgba(244,241,234,.92);border-radius:6px;touch-action:none;box-shadow:0 2px 18px rgba(28,27,26,.22)} /* 蒙层提亮：保证色块在插画背景上可读 */
+
+/* ---------- 关卡随机背景 ---------- */
+#gameBg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;transition:opacity .4s ease}
+#gameBg::after{content:'';position:absolute;inset:0;background:rgba(244,241,234,.30)} /* 纸色半透明蒙层：插画做背景但不抢色块 */
 #board.quake{animation:quake 320ms ease}   /* 炸弹爆炸屏幕震动（桌面兜底，手机另有 navigator.vibrate） */
 @keyframes quake{
   15%{transform:translate(-4px,3px)}30%{transform:translate(4px,-2px)}
@@ -169,6 +173,14 @@ body{
 /* ---------- 胜利/失败结算浮层 ---------- */
 .ov{position:fixed;inset:0;background:rgba(28,27,26,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px}
 .ov.hidden{display:none}
+
+/* ---------- 通关庆祝：隐藏方块 + 大字庆祝 ---------- */
+#board.hide-tiles .tile{opacity:0 !important;pointer-events:none;transition:opacity .3s ease}
+#winFlash{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:45;pointer-events:none}
+#winFlash.on{display:flex;animation:winPop .55s cubic-bezier(.2,1.4,.4,1) backwards}
+.win-big{font-size:46px;font-weight:800;letter-spacing:.12em;color:#30a46c;text-shadow:0 2px 0 rgba(255,255,255,.9),0 6px 22px rgba(48,164,108,.45)}
+.win-sub{font-size:15px;color:#1c1b1a;background:rgba(244,241,234,.92);padding:6px 18px;border-radius:999px;letter-spacing:.1em}
+@keyframes winPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .ov-card{position:relative;background:#f4f1ea;border-radius:6px;padding:34px 26px 24px;width:100%;max-width:340px;text-align:center;box-shadow:0 0 0 1px rgba(28,27,26,.35)}
 .ov-x{
   position:absolute;top:10px;right:10px;width:34px;height:34px;
@@ -240,6 +252,9 @@ body{
 
 </div>
 
+<div id="gameBg" aria-hidden="true"></div>
+<div id="winFlash" aria-hidden="true"><div class="win-big">通关成功！</div><div class="win-sub" id="winSub">太棒了 · 下一关已解锁</div></div>
+
 <!-- 胜利 / 失败结算浮层 -->
 <div id="overlay" class="ov hidden">
   <div class="ov-card">
@@ -260,7 +275,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.2.6';
+  var VER = '0.2.7';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -355,7 +370,10 @@ const toastEl = $('toast');
 const overlay = $('overlay'), ovTitle = $('ovTitle'), ovData = $('ovData');
 const ovNext = $('ovNext'), ovRetry = $('ovRetry'), ovClose = $('ovClose');
 const levelList = $('levelList');
-const bgmAudio = $('bgmFile');        // 封面/菜单 BGM（依然爱你）
+const bgmAudio = $('bgmFile');
+const gameBg = $('gameBg');
+const winFlash = $('winFlash');
+const winSub = $('winSub');        // 封面/菜单 BGM（依然爱你）
 const bgmGameAudio = $('bgmGame');    // 游戏内 BGM（烟花易冷）
 
 /* ---------------- 小工具 ---------------- */
@@ -375,6 +393,8 @@ function forEachTile(fn) {
 let actx = null;          // AudioContext，首次用户手势时创建
 let bgmTimer = null;      // 合成 BGM 音序器
 const BGM_STEP_MS = 340;  // BGM 每步时长
+/* 关卡背景池：每关随机一张（bg1~bg5.jpg） */
+const BG_COUNT = 5;
 const BGM_MELODY = [      // 原创轻快旋律（A 大调五声音阶，度数，-1 为休止）
   0,4,7,9, 7,4,2,4,   0,4,7,9, 12,9,7,4,
   2,5,9,12, 9,5,2,5,  4,7,12,14, 12,7,4,2,
@@ -517,6 +537,10 @@ function startLevel(idx) {
   timeLeft = lv.time; movesLeft = lv.moves;
   score = 0; timeUp = false; levelOver = false;
   overlay.classList.add('hidden');
+  /* 每关随机一张背景（落在 1~5，均匀覆盖 5 张） */
+  const bgIdx = 1 + Math.floor(Math.random() * BG_COUNT);
+  gameBg.style.backgroundImage = 'url(bg' + bgIdx + '.jpg)';
+  board.classList.remove('hide-tiles');
   showScreen('game');
   updateHud();
 
@@ -557,13 +581,23 @@ function endLevel(win) {
   stopBgm();           // 停掉游戏内 BGM，让胜利/失败音效清晰响完
   clearSelection();
   if (win) {
+    /* 通关庆祝：隐藏全部方块 3 秒，显示大字庆祝，再弹结算浮层 */
+    board.classList.add('hide-tiles');
+    winSub.textContent = (curLevel + 1 < LEVELS.length) ? '太棒了 · 第 ' + (curLevel + 2) + ' 关已解锁' : '100 关全部通关 · 你是传说！';
+    winFlash.classList.remove('on');
+    void winFlash.offsetWidth;              // 重启动画
+    winFlash.classList.add('on');
+    setTimeout(() => {
+      winFlash.classList.remove('on');
+      showOverlay(true);
+    }, 3000);
     sfx.win();
     progress.unlocked = Math.max(progress.unlocked, Math.min(LEVELS.length, curLevel + 2)); // 解锁下一关（上限 100）
     saveProgress();
   } else {
     sfx.fail();
+    showOverlay(false);
   }
-  showOverlay(win);
 }
 
 /* 结算浮层：右上角 ✕ 关闭回关卡选择；下方按钮按胜负显示 */
