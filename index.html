@@ -95,24 +95,44 @@ body{
 .lv-card.done .lv-num{background:#30a46c}
 .lv-pass{flex:none;font-size:11px;color:#30a46c;font-weight:700;letter-spacing:.06em}
 
-/* ---------- 顶部计分面板（两行 HUD） ---------- */
-.hud{padding:2px 2px 10px;border-bottom:2px solid #1c1b1a}
-.hud-row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
-.hud-row + .hud-row{margin-top:8px;padding-top:8px;border-top:1px dashed #d9d3c7}
-.hud-label{font-size:10px;letter-spacing:.1em;color:#7d766c;margin-bottom:2px}
-.hud-val{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:19px;font-weight:700;line-height:1}
-.hud-val.time-low{color:#e5484d}   /* 剩余时间 ≤5s 红色告警 */
-.hud-title{font-size:11px;color:#7d766c;letter-spacing:.1em;padding-bottom:2px}
-.hud-combo{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:16px;line-height:1;color:#b9b2a6}
-.hud-combo.on{color:#e5484d}
+/* ---------- 顶部计分面板：深色半透明仪表牌 ---------- */
+.hud{
+  margin:0 10px;background:linear-gradient(180deg,rgba(28,27,26,.92),rgba(43,41,38,.88));
+  border:1.5px solid #1c1b1a;border-radius:10px;box-shadow:0 4px 14px rgba(28,27,26,.35);
+  padding:10px 14px 12px;
+}
+.hud-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hud-row + .hud-row{margin-top:9px;padding-top:8px;border-top:1px dashed rgba(255,255,255,.16)}
+.hud-label{font-size:9px;letter-spacing:.14em;color:#c9c2b4;margin-bottom:2px}
+.hud-val{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:15px;font-weight:700;line-height:1;color:#f4f1ea}
+.hud-val.time-low{color:#ff7a7f}   /* 剩余时间 ≤5s 红色告警 */
+.hud-title{display:none}   /* 旧版标题位弃用：面板化后信息已紧凑 */
+.hud-score{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:26px;font-weight:800;line-height:1.05;color:#f4f1ea;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.hud-target-val{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:15px;font-weight:700;color:#ffb224}
+.hud-combo{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:12px;font-weight:700;color:#8a8276;padding:3px 9px;border-radius:999px;box-shadow:inset 0 0 0 1px #5a544b;line-height:1.3}
+.hud-combo.on{color:#fff;background:#e5484d;box-shadow:0 0 0 1.5px rgba(255,255,255,.25)}
+
+/* 目标进度条：得分 / 目标 实时填充 */
+.hud-bar{margin-top:8px;height:6px;background:rgba(255,255,255,.14);border-radius:999px;overflow:hidden;position:relative}
+.hud-bar i{position:absolute;left:0;top:0;bottom:0;width:0%;background:linear-gradient(90deg,#ffb224,#e5484d);border-radius:999px;transition:width .35s ease}
+.hud-bar em{position:absolute;top:-2px;bottom:-2px;right:0;width:2px;background:rgba(255,255,255,.55)}
 
 /* ---------- 操作提示 ---------- */
 .hint{font-size:11px;color:#8a8276;text-align:center;margin:-4px 0 0}
 
 /* ---------- 棋盘 ---------- */
 #boardWrap{display:flex;justify-content:center;flex:1;align-items:center} /* 撑满剩余高度，让棋盘居中在背景上 */
-#board{position:relative;background:rgba(244,241,234,.92);border-radius:6px;touch-action:none;box-shadow:0 2px 18px rgba(28,27,26,.22);transition:background .3s ease,box-shadow .3s ease}
-#board.hide-tiles{background:transparent;box-shadow:none} /* 庆祝时撤掉白底，露出关卡背景插画 */
+#board{
+  position:relative;background:rgba(244,241,234,.85);border-radius:10px;touch-action:none;
+  border:4px solid #6b4a2f;                                    /* 木框：深木色 */
+  box-shadow:0 6px 20px rgba(28,27,26,.35),inset 0 0 0 2px rgba(255,255,255,.55); /* 外投影 + 内衬白线 */
+  transition:background .3s ease,box-shadow .3s ease;
+}
+#board::before,#board::after{content:'';position:absolute;width:8px;height:8px;background:#3a2a1b;border-radius:50%;box-shadow:inset 0 1px 1px rgba(255,255,255,.4);z-index:3} /* 铆钉（上两颗） */
+#board::before{top:6px;left:6px}
+#board::after{top:6px;right:6px}
+#board.hide-tiles{background:transparent;box-shadow:none;border-color:transparent} /* 庆祝时撤掉木框与底色，露出关卡背景插画 */
+#board.hide-tiles::before,#board.hide-tiles::after{display:none}
 
 /* ---------- 关卡随机背景 ---------- */
 #gameBg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;transition:opacity .4s ease}
@@ -234,15 +254,15 @@ body{
   <section id="scr-game" class="screen">
     <header class="hud">
       <div class="hud-row">
-        <div><div class="hud-label">得分 SCORE</div><div class="hud-val" id="score">000000</div></div>
-        <div><div class="hud-label">目标 TARGET</div><div class="hud-val" id="target">500</div></div>
-        <div class="hud-title">红玉的消消乐</div>
-        <div style="text-align:right"><div class="hud-label">连击 COMBO</div><div class="hud-combo" id="combo">—</div></div>
+        <div><div class="hud-label">得分 SCORE</div><div class="hud-score" id="score">000000</div></div>
+        <div class="hud-combo" id="combo">×0</div>
+        <div style="text-align:right"><div class="hud-label">目标 TARGET</div><div class="hud-target-val" id="target">800</div></div>
       </div>
+      <div class="hud-bar"><i id="hudBar"></i><em></em></div>
       <div class="hud-row">
-        <div><div class="hud-label">倒计时 TIME</div><div class="hud-val" id="time">30</div></div>
-        <div><div class="hud-label">剩余步数 MOVES</div><div class="hud-val" id="moves">20</div></div>
-        <div style="flex:1"></div>
+        <div><div class="hud-label">倒计时 TIME</div><div class="hud-val" id="time">60</div></div>
+        <div><div class="hud-label">步数 MOVES</div><div class="hud-val" id="moves">12</div></div>
+        <div style="text-align:right"><div class="hud-label">关卡 LEVEL</div><div class="hud-val" id="lvnum">1/100</div></div>
       </div>
     </header>
 
@@ -279,7 +299,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.2.9.1';
+  var VER = '0.3.0';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -369,7 +389,8 @@ let timerId = null;              // 倒计时定时器
 const $ = (id) => document.getElementById(id);
 const board = $('board');
 const scoreEl = $('score'), targetEl = $('target'), comboEl = $('combo');
-const timeEl = $('time'), movesEl = $('moves');
+const timeEl = $('time'), movesEl = $('moves'), lvnumEl = $('lvnum');
+const hudBarEl = $('hudBar');
 const toastEl = $('toast');
 const overlay = $('overlay'), ovTitle = $('ovTitle'), ovData = $('ovData');
 const ovNext = $('ovNext'), ovRetry = $('ovRetry'), ovClose = $('ovClose');
@@ -559,7 +580,6 @@ function startLevel(idx) {
   board.classList.remove('hide-tiles');
   showScreen('game');
   updateHud();
-
   gen++;                 // 局代号 +1：中止旧局进行中的异步结算
   lock = false; gesture = null;
   clearSelection();
@@ -1035,13 +1055,16 @@ function updateHud() {
   timeEl.textContent = timeLeft;
   timeEl.classList.toggle('time-low', timeLeft <= TIME_LOW && timeLeft > 0);
   movesEl.textContent = movesLeft;
+  lvnumEl.textContent = (curLevel + 1) + '/' + LEVELS.length;
+  hudBarEl.style.width = Math.min(100, score / LEVELS[curLevel].target * 100) + '%';
 }
 function addScore(n) {
   score += n;
   scoreEl.textContent = String(score).padStart(6, '0');
+  hudBarEl.style.width = Math.min(100, score / LEVELS[curLevel].target * 100) + '%';   // 进度条实时跟进
 }
 function showCombo(w) { comboEl.textContent = '×' + w; comboEl.classList.add('on'); }
-function hideCombo() { comboEl.textContent = '—'; comboEl.classList.remove('on'); }
+function hideCombo() { comboEl.textContent = '×0'; comboEl.classList.remove('on'); }
 
 let toastTimer = null;
 function toast(msg) {
