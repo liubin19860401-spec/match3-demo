@@ -111,7 +111,8 @@ body{
 
 /* ---------- 棋盘 ---------- */
 #boardWrap{display:flex;justify-content:center;flex:1;align-items:center} /* 撑满剩余高度，让棋盘居中在背景上 */
-#board{position:relative;background:rgba(244,241,234,.92);border-radius:6px;touch-action:none;box-shadow:0 2px 18px rgba(28,27,26,.22)} /* 蒙层提亮：保证色块在插画背景上可读 */
+#board{position:relative;background:rgba(244,241,234,.92);border-radius:6px;touch-action:none;box-shadow:0 2px 18px rgba(28,27,26,.22);transition:background .3s ease,box-shadow .3s ease}
+#board.hide-tiles{background:transparent;box-shadow:none} /* 庆祝时撤掉白底，露出关卡背景插画 */
 
 /* ---------- 关卡随机背景 ---------- */
 #gameBg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;transition:opacity .4s ease}
@@ -177,9 +178,9 @@ body{
 /* ---------- 通关庆祝：隐藏方块 + 大字庆祝 ---------- */
 #board.hide-tiles .tile{opacity:0 !important;pointer-events:none;transition:opacity .3s ease}
 #winFlash{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:45;pointer-events:none}
-#winFlash.on{display:flex;animation:winPop .55s cubic-bezier(.2,1.4,.4,1) backwards}
-.win-big{font-size:46px;font-weight:800;letter-spacing:.12em;color:#30a46c;text-shadow:0 2px 0 rgba(255,255,255,.9),0 6px 22px rgba(48,164,108,.45)}
-.win-sub{font-size:15px;color:#1c1b1a;background:rgba(244,241,234,.92);padding:6px 18px;border-radius:999px;letter-spacing:.1em}
+#winFlash.on{display:flex;animation:winPop .55s cubic-bezier(.2,1.4,.4,1) backwards;background:radial-gradient(ellipse at center,rgba(28,27,26,.44) 0%,rgba(28,27,26,.18) 60%,rgba(28,27,26,.30) 100%)} /* 暗色渐变衬底：背景图可见但文字可读 */
+.win-big{font-size:44px;font-weight:800;letter-spacing:.12em;color:#3ddc84;background:rgba(28,27,26,.58);border-radius:12px;padding:12px 26px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.win-sub{font-size:15px;color:#f4f1ea;background:rgba(28,27,26,.55);padding:6px 18px;border-radius:999px;letter-spacing:.1em}
 @keyframes winPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 .ov-card{position:relative;background:#f4f1ea;border-radius:6px;padding:34px 26px 24px;width:100%;max-width:340px;text-align:center;box-shadow:0 0 0 1px rgba(28,27,26,.35)}
 .ov-x{
@@ -275,7 +276,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.2.7';
+  var VER = '0.2.8';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
