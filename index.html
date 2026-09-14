@@ -306,7 +306,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.5';
+  var VER = '0.3.6';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -336,6 +336,7 @@ const ROWS = 6;               // 棋盘行数
 const COLS = 6;               // 棋盘列数
 const COLOR_COUNT = 5;        // 颜色种类数（对应 f0~f4）
 const GAP = 6;                // 方块间距（px）
+const FRAME = 10;             // 木框占位：4px×2 + 余量，方块坐标以此为原点
 const SWAP_MS = 150;          // 交换动画时长
 const CLEAR_MS = 200;         // 消除动画时长
 const FALL_MS = 250;          // 下落动画时长
@@ -724,10 +725,12 @@ function pickSafeColor(r, c) {
 /* 按屏宽计算方块尺寸并落位（旋转/缩放窗口时也会重新调用） */
 function layout() {
   const w = (board.parentElement && board.parentElement.clientWidth) || 320;
-  /* 整体缩放系数 0.90：棋盘占屏 90%，四周留边衬托木框质感（用户定稿） */
+  /* 整体缩放系数 0.90：棋盘占屏 90%，四周留边衬托木框质感（用户定稿）
+     FRAME：木框 4px×2 + 内衬白线占用，从可用宽度里扣除，保证内容区不溢出边框 */
   const SCALE = 0.90;
-  tileSize = Math.floor(((w * SCALE) - GAP * (COLS - 1)) / COLS);
-  const boardSize = tileSize * COLS + GAP * (COLS - 1);
+  tileSize = Math.floor(((w * SCALE) - FRAME * 2 - GAP * (COLS - 1)) / COLS);
+  const contentSize = tileSize * COLS + GAP * (COLS - 1);       // 内容区（不含框）
+  const boardSize = contentSize + FRAME * 2;                    // 边框到边框的总尺寸
   board.style.width = boardSize + 'px';
   board.style.height = boardSize + 'px';
   forEachTile((t) => {
@@ -740,7 +743,7 @@ function layout() {
 /* 把方块摆到它数据坐标 (r,c) 对应的像素位置；ms 为过渡时长 */
 function placeTile(t, ms) {
   t.el.style.transitionDuration = ms + 'ms';
-  t.el.style.transform = 'translate(' + (t.c * step()) + 'px,' + (t.r * step()) + 'px)';
+  t.el.style.transform = 'translate(' + (FRAME + t.c * step()) + 'px,' + (FRAME + t.r * step()) + 'px)';
 }
 
 /* 统一刷新全部方块位置（带过渡动画） */
@@ -898,8 +901,8 @@ function shatter(t) {
     const s = document.createElement('div');
     s.className = 'shard';
     const size = Math.round(tileSize * (0.22 + Math.random() * 0.16));      // 碎片大小随机
-    const cx = t.c * step() + tileSize / 2;                                 // 方块中心（棋盘坐标系）
-    const cy = t.r * step() + tileSize / 2;
+    const cx = FRAME + t.c * step() + tileSize / 2;                          // 方块中心（含木框偏移）
+    const cy = FRAME + t.r * step() + tileSize / 2;
     const angle = (i / SHARD_COUNT) * Math.PI * 2 + (Math.random() - 0.5);  // 均匀角度 + 随机抖动
     const dist = tileSize * (0.7 + Math.random() * 0.8);                    // 飞散距离随机
     s.style.width = size + 'px';
@@ -943,7 +946,7 @@ function applyGravity(allowBomb) {
       if (allowBomb && Math.random() < BOMB_DROP_CHANCE) { t.special = 'bomb'; markBomb(t); }
       t.el.style.transitionDuration = '0ms';
       t.el.style.transform =
-        'translate(' + (c * step()) + 'px,' + ((r - spawnCount) * step()) + 'px)';
+        'translate(' + (FRAME + c * step()) + 'px,' + (FRAME + (r - spawnCount) * step()) + 'px)';
       grid[r][c] = t;
     }
   }
