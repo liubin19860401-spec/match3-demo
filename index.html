@@ -271,12 +271,15 @@ body{
 <!-- 背景音乐：优先加载同目录 bgm.mp3（用户自备合法音源）；不存在时自动降级为内置合成旋律 -->
 <audio id="bgmFile" src="bgm.mp3" loop preload="auto"></audio>
 <!-- 游戏内背景音乐（与封面音乐分开） -->
-<audio id="bgmGame" src="bgm-game.mp3" loop preload="auto"></audio>
+<audio id="bgmGame" src="beijing1.mp3" loop preload="auto"></audio>
+<!-- 消除 / 爆炸音效（用户音源，加载失败自动回退 Web Audio 合成音） -->
+<audio id="sfxClear" src="xiaochu2.mp3" preload="auto"></audio>
+<audio id="sfxBoom" src="boom3.mp3" preload="auto"></audio>
 <script>
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.2.8';
+  var VER = '0.2.9';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -372,6 +375,9 @@ const overlay = $('overlay'), ovTitle = $('ovTitle'), ovData = $('ovData');
 const ovNext = $('ovNext'), ovRetry = $('ovRetry'), ovClose = $('ovClose');
 const levelList = $('levelList');
 const bgmAudio = $('bgmFile');
+const bgmGameAudio = $('bgmGame');    // 游戏内 BGM（beijing1，循环）
+const sfxClearAudio = $('sfxClear');  // 消除音效（xiaochu2）
+const sfxBoomAudio = $('sfxBoom');    // 爆炸音效（boom3）
 const gameBg = $('gameBg');
 const winFlash = $('winFlash');
 const winSub = $('winSub');        // 封面/菜单 BGM（依然爱你）
@@ -438,11 +444,20 @@ function boomSound() {
   src.start(); o.start(); o.stop(actx.currentTime + dur);
 }
 
+/* 音效播放：用户音源优先，未就绪/失败时回退合成音（replay 为回退函数）。
+   currentTime 归零实现连发重叠。 */
+function playSfx(el, replay) {
+  try {
+    if (el.readyState >= 2) { el.currentTime = 0; el.volume = 0.7; el.play().catch(() => replay()); return; }
+  } catch (e) {}
+  replay();
+}
+
 const sfx = {
   tap:   () => beep(620, 0.05, 'sine', 0.10),                                    // 点选
   swap:  () => { beep(380, 0.07, 'triangle', 0.10); beep(500, 0.06, 'triangle', 0.08, 0.05); }, // 交换
-  clear: (w) => { const base = 480 + Math.min(w, 4) * 60; beep(base, 0.09, 'sine', 0.12); beep(base * 1.25, 0.10, 'sine', 0.10, 0.06); }, // 消除（连锁越高音越高）
-  boom:  () => boomSound(),                                                      // 炸弹爆炸
+  clear: (w) => playSfx(sfxClearAudio, () => { const base = 480 + Math.min(w, 4) * 60; beep(base, 0.09, 'sine', 0.12); beep(base * 1.25, 0.10, 'sine', 0.10, 0.06); }), // 消除：xiaochu2
+  boom:  () => playSfx(sfxBoomAudio, () => boomSound()),                                                                          // 爆炸：boom3
   win:   () => { [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.16, 'triangle', 0.14, i * 0.12)); }, // 胜利琶音
   fail:  () => { beep(392, 0.22, 'sine', 0.14); beep(262, 0.4, 'sine', 0.14, 0.2); },                    // 失败下行
 };
