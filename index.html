@@ -306,7 +306,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.4';
+  var VER = '0.3.5';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -433,6 +433,8 @@ const BG_COUNT = 5;
 /* 背景预加载：进关卡列表时就用 Image 对象拉取全部 5 张，
    浏览器会缓存，之后每关切换背景零等待、不闪加载 */
 const bgCache = [];
+let bgPool = [];        // 背景洗牌池：打乱后依次消费，用完重洗
+let lastBg = 0;         // 上一关用过的背景编号（防相邻重复）
 function preloadBackgrounds() {
   if (bgCache.length) return;              // 只预加载一次
   for (let i = 1; i <= BG_COUNT; i++) {
@@ -592,8 +594,18 @@ function startLevel(idx) {
   timeLeft = lv.time; movesLeft = lv.moves;
   score = 0; timeUp = false; levelOver = false;
   overlay.classList.add('hidden');
-  /* 每关随机一张背景（落在 1~5，均匀覆盖 5 张） */
-  const bgIdx = 1 + Math.floor(Math.random() * BG_COUNT);
+  /* 背景洗牌池：打乱 5 张依次用完再重洗，保证相邻关卡必不重复 */
+  if (!bgPool.length) {
+    bgPool = Array.from({ length: BG_COUNT }, (_, k) => k + 1);
+    for (let k = bgPool.length - 1; k > 0; k--) {
+      const r = Math.floor(Math.random() * (k + 1));
+      [bgPool[k], bgPool[r]] = [bgPool[r], bgPool[k]];
+    }
+    /* 重洗后若新池首张与上一关同图，与池内另一张交换避免接缝重复 */
+    if (bgPool[0] === lastBg && bgPool.length > 1) [bgPool[0], bgPool[1]] = [bgPool[1], bgPool[0]];
+  }
+  const bgIdx = bgPool.shift();
+  lastBg = bgIdx;
   gameBg.style.backgroundImage = 'url(bg' + bgIdx + '.jpg)';
   board.classList.remove('hide-tiles');
   showScreen('game');
