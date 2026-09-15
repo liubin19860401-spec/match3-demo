@@ -311,7 +311,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.9';
+  var VER = '0.4.0';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -500,6 +500,24 @@ function playSfx(el, replay) {
   replay();
 }
 
+
+/* 消除人声音效池：按食物类型叠加播放（在通用消除音之上）。
+   对应关系：火锅=配油碟 · 柠檬茶=丘大叔 · 榴莲=我的最爱 · 牛肉面=好吃 · 螺蛳粉=味道不错 */
+const VOICE_SFX = {
+0: 'voice-noodle.mp3',   // f0 红 · 牛肉面
+1: 'voice-luosi.mp3',    // f1 琥珀 · 螺蛳粉
+2: 'voice-lemon.mp3',    // f2 绿 · 柠檬茶
+3: 'voice-durian.mp3',   // f3 蓝 · 榴莲
+4: 'voice-hotpot.mp3',   // f4 紫 · 火锅
+};
+const voiceEls = {};      // audio 元素池（懒创建，避免预载阻塞）
+function playVoiceSfx(color) {
+  const src = VOICE_SFX[color];
+  if (!src) return;
+  let el = voiceEls[src];
+  if (!el) { el = new Audio(src); el.volume = 0.75; voiceEls[src] = el; }
+  try { el.currentTime = 0; el.play().catch(() => {}); } catch (e) {}
+}
 const sfx = {
   tap:   () => beep(620, 0.05, 'sine', 0.10),                                    // 点选
   swap:  () => { beep(380, 0.07, 'triangle', 0.10); beep(500, 0.06, 'triangle', 0.08, 0.05); }, // 交换
@@ -1026,6 +1044,7 @@ async function trySwap(a, b) {
     addScore(BASE_SCORE * matches.size * wave);   // 得分 = 10 × 块数 × 波序号
     if (wave >= 2) showCombo(wave);               // 连锁 ≥2 波时展示连击
     sfx.clear(wave);
+    new Set([...matches].map(t => t.color)).forEach(color => playVoiceSfx(color));   // 每种食物播一条对应人声
     if (found.hadBomb) { sfx.boom(); shakeBoard(); vibrate(120); }   // 炸弹爆炸：音效+屏幕震动+手机震动
 
     matches.forEach(trembleFace);                 // 1) 待消除预告：轻抖动+旋转
