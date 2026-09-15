@@ -306,7 +306,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.6';
+  var VER = '0.3.7';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -336,7 +336,7 @@ const ROWS = 6;               // 棋盘行数
 const COLS = 6;               // 棋盘列数
 const COLOR_COUNT = 5;        // 颜色种类数（对应 f0~f4）
 const GAP = 6;                // 方块间距（px）
-const FRAME = 10;             // 木框占位：4px×2 + 余量，方块坐标以此为原点
+const FRAME = 6;              // 方块与木框内沿的均匀间隙（四周一致，方块居中）
 const SWAP_MS = 150;          // 交换动画时长
 const CLEAR_MS = 200;         // 消除动画时长
 const FALL_MS = 250;          // 下落动画时长
@@ -725,12 +725,13 @@ function pickSafeColor(r, c) {
 /* 按屏宽计算方块尺寸并落位（旋转/缩放窗口时也会重新调用） */
 function layout() {
   const w = (board.parentElement && board.parentElement.clientWidth) || 320;
-  /* 整体缩放系数 0.90：棋盘占屏 90%，四周留边衬托木框质感（用户定稿）
-     FRAME：木框 4px×2 + 内衬白线占用，从可用宽度里扣除，保证内容区不溢出边框 */
+  /* 整体缩放系数 0.90（用户定稿）
+     尺寸构成：边框 4×2 + 均匀间隙 FRAME×2 + 内容区，方块在框内四边等距居中 */
   const SCALE = 0.90;
-  tileSize = Math.floor(((w * SCALE) - FRAME * 2 - GAP * (COLS - 1)) / COLS);
-  const contentSize = tileSize * COLS + GAP * (COLS - 1);       // 内容区（不含框）
-  const boardSize = contentSize + FRAME * 2;                    // 边框到边框的总尺寸
+  const BORDER_W = 4;
+  tileSize = Math.floor(((w * SCALE) - BORDER_W * 2 - FRAME * 2 - GAP * (COLS - 1)) / COLS);
+  const contentSize = tileSize * COLS + GAP * (COLS - 1);       // 内容区（不含框与间隙）
+  const boardSize = BORDER_W * 2 + FRAME * 2 + contentSize;     // 边框到边框的总尺寸
   board.style.width = boardSize + 'px';
   board.style.height = boardSize + 'px';
   forEachTile((t) => {
