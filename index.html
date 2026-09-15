@@ -311,7 +311,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.3.8';
+  var VER = '0.3.9';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -923,9 +923,8 @@ function flyToScore(t) {
   const dx = endX - startX, dy = endY - startY;
   const anim = el.animate([
     { transform: 'translate(0,0) scale(1)', opacity: 1 },
-    { transform: 'translate(' + dx * 0.55 + 'px,' + dy * 0.55 + 'px) scale(0.55)', opacity: 1, offset: 0.55 },
-    { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(0.18)', opacity: 0.85 },
-  ], { duration: 480, easing: 'cubic-bezier(.35,.1,.35,1)', fill: 'forwards' });
+    { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(1)', opacity: 1 },
+  ], { duration: 800, easing: 'cubic-bezier(.4,.1,.4,1)', fill: 'forwards' });
   anim.onfinish = () => {
     el.remove();
     scoreEl.classList.add('score-pulse');          // 到达：得分数字脉冲一下
