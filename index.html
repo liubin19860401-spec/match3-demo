@@ -186,14 +186,11 @@ body{
 @keyframes scorePulse{0%{transform:scale(1)}45%{transform:scale(1.28)}100%{transform:scale(1)}}
 .score-pulse{animation:scorePulse .32s ease}
 
-/* ---------- 炸弹方块外观：保留原色参与匹配，叠加深色弹体 + 引信火花 ---------- */
+/* ---------- 炸弹方块外观：保留原色参与匹配，叠加用户萌版炸弹图标 ---------- */
 .face.bomb::after{
-  content:'';position:absolute;left:50%;top:52%;width:50%;height:50%;
-  transform:translate(-50%,-50%);background:#23222a;border-radius:50%;
-}
-.face.bomb::before{
-  content:'';position:absolute;right:16%;top:12%;width:16%;height:16%;
-  background:#ffb224;border-radius:50%;box-shadow:0 0 6px 2px rgba(255,178,36,.65);
+  content:'';position:absolute;left:50%;top:50%;width:82%;height:82%;
+  transform:translate(-50%,-50%);background:url(bomb.png) center/contain no-repeat;
+  filter:drop-shadow(0 1.5px 3px rgba(0,0,0,.35));
 }
 
 /* 5 色色板（与设计文档定稿一致），--icon 为对应食物素材（图标按用户素材实际内容映射） */
@@ -311,7 +308,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.4.1';
+  var VER = '0.4.2';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
