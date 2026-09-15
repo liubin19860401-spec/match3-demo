@@ -308,7 +308,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.4.3';
+  var VER = '0.4.4';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -514,14 +514,16 @@ function playVoiceLine(file) {
   if (!el) { el = new Audio(file); el.volume = 0.85; voiceEls[file] = el; }
   try { el.currentTime = 0; el.play().catch(() => {}); } catch (e) {}
 }
-/* 人声播放锁：上条人声未播完（或未到 250ms 间隔）时不播下一条，消除杂乱感 */
-let voiceBusyUntil = 0;
+/* 人声节流（用户定稿）：连续消除时只播第一波，1 秒内的后续波次全部静默；
+   levelOver（通关前的最后消除）不播人声 */
+let lastVoiceAt = 0;
 function playVoiceOnce(matches) {
+  if (levelOver) return;                               // 通关消除不播人声
   const now = Date.now();
-  if (now < voiceBusyUntil) return;                    // 锁定期内：跳过本波人声
+  if (now - lastVoiceAt < 1000) return;                // 1 秒内连续消除：只保留第一波的人声
+  lastVoiceAt = now;
   const arr = [...matches];
-  const pick = arr[Math.floor(Math.random() * arr.length)];   // 随机取一个被消方块
-  voiceBusyUntil = now + 250;
+  const pick = arr[Math.floor(Math.random() * arr.length)];
   playVoiceSfx(pick.color);
 }
 
@@ -950,7 +952,9 @@ function flyToScore(t) {
   const size = Math.round(tileSize * 0.74);                       // 起始大小 = 方块内图标实际大小
   el.style.width = size + 'px';
   el.style.height = size + 'px';
-  el.style.setProperty('--icon', getComputedStyle(t.face).getPropertyValue('--icon'));
+  /* 图标源兜底：face 内联样式残留时 computed --icon 仍可靠；为空则跳过飞行 */
+  const iconVar = getComputedStyle(t.face).getPropertyValue('--icon');
+  if (!iconVar || !iconVar.trim()) return;
   el.style.left = (startX - size / 2) + 'px';
   el.style.top = (startY - size / 2) + 'px';
   document.body.appendChild(el);
@@ -1014,7 +1018,11 @@ function applyGravity(allowBomb) {
     for (let r = write; r >= 0; r--) {
       const t = createTile(randColor(), r, c);
       if (allowBomb && Math.random() < BOMB_DROP_CHANCE) { t.special = 'bomb'; markBomb(t); }
-      t.el.style.transitionDuration = '0ms';
+      /* 复用防御：新块落位前清掉可能残留的内联透明度/缩放与 pop 类（gen 竞态路径） */
+  t.face.classList.remove('pop', 'shake');
+  t.face.style.transform = '';
+  t.face.style.opacity = '';
+  t.el.style.transitionDuration = '0ms';
       t.el.style.transform =
         'translate(' + (FRAME + c * step()) + 'px,' + (FRAME + (r - spawnCount) * step()) + 'px)';
       grid[r][c] = t;
