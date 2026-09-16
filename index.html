@@ -31,6 +31,8 @@ body{
 /* ---------- 场景切换：封面 / 关卡选择 / 游戏 ---------- */
 .screen{display:none;flex-direction:column;gap:14px;flex:1}
 .screen.on{display:flex}
+/* 关卡地图场景：约束在视口内，内部 #mapScroll 自行滚动（.app 可增长会吞掉 flex 约束，须显式 min-height:0） */
+#scr-levels{min-height:0}
 
 /* ---------- 封面 ---------- */
 /* ---------- 封面：全幅插画背景 + 底部渐变承托区 ---------- */
@@ -69,31 +71,66 @@ body{
 }
 .ghost-btn:active{color:#1c1b1a}
 
-/* ---------- 关卡选择 ---------- */
-.ls-title{font-size:20px;font-weight:700;letter-spacing:.1em;text-align:center;margin:6px 0 0}
-#levelList{display:grid;grid-template-columns:repeat(2,1fr);gap:10px} /* 100 关双列网格，单列会太长 */
-@media (max-width:340px){#levelList{grid-template-columns:1fr}}
-.lv-card{
-  display:flex;align-items:center;gap:10px;text-align:left;
-  background:#fff;border:1px solid #d9d3c7;border-radius:4px;
-  padding:10px 12px;font-family:inherit;cursor:pointer;touch-action:manipulation;
+/* ---------- 关卡选择：闯关地图（v0.5.0，竖向小径+节点三态+星级挂载） ---------- */
+.map-head{
+  margin:0 10px;background:linear-gradient(180deg,rgba(28,27,26,.92),rgba(43,41,38,.88));
+  border:1.5px solid #1c1b1a;border-radius:10px;box-shadow:0 4px 14px rgba(28,27,26,.35);
+  padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex:none;
+}
+.map-head-t{font-size:15px;font-weight:700;letter-spacing:.12em;color:#f4f1ea}
+.map-head-stars{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:15px;font-weight:700;color:#8a8276;display:flex;align-items:center;gap:4px}
+.map-head-stars .mh-star{color:#ffb224;font-style:normal;font-size:17px}
+.map-head-stars b{color:#ffb224;font-weight:800}
+#mapScroll{
+  position:relative;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:0;
+  border:1.5px solid #1c1b1a;border-radius:10px;margin:0 10px;
+  background:linear-gradient(180deg,#f7f4ec,#efe9db);
+  box-shadow:inset 0 2px 8px rgba(28,27,26,.08);
+}
+/* 中央闯关小径：竖向虚线，纯 CSS 零图片 */
+#mapTrail{position:absolute;left:50%;top:0;bottom:0;width:0;border-left:3px dashed #d9d3c7;transform:translateX(-1.5px);pointer-events:none}
+#levelList{position:relative;display:flex;flex-direction:column;gap:56px;padding:46px 0 60px}
+/* 关卡节点：圆形按钮，左右交错 */
+.lv-node{
+  position:relative;width:54px;height:54px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;
+  font-family:ui-monospace,Consolas,Menlo,monospace;font-size:18px;font-weight:700;
+  border:none;padding:0;cursor:pointer;touch-action:manipulation;
   transition:transform 120ms ease;
 }
-.lv-card:active{transform:scale(.98)}
-.lv-num{
-  font-family:ui-monospace,Consolas,Menlo,monospace;font-size:19px;font-weight:700;
-  width:44px;height:44px;border-radius:4px;display:flex;align-items:center;justify-content:center;
-  background:#1c1b1a;color:#f4f1ea;flex:none;
+.lv-node:active{transform:scale(.94)}
+.lv-node .node-num{position:relative;z-index:1}
+.lv-node .node-lv{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:10px;color:#8a8276;white-space:nowrap;letter-spacing:.05em;font-family:inherit}
+/* 星级挂节点下方：金色实心=已得，灰=未得 */
+.node-stars{position:absolute;bottom:-24px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:13px;letter-spacing:3px;font-style:normal;text-indent:3px}
+.node-stars .on{color:#ffb224;text-shadow:0 1px 2px rgba(255,178,36,.35)}
+.node-stars .off{color:#c9c2b4}
+/* 已通关：红玉红渐变圆 */
+.lv-node.done{
+  background:linear-gradient(180deg,#e5484d,#c73a3f);color:#fff;
+  box-shadow:0 3px 8px rgba(229,72,77,.4),inset 0 -2px 0 rgba(0,0,0,.2);
 }
-.lv-info{flex:1;min-width:0}
-.lv-name{font-size:15px;font-weight:600}
-.lv-meta{font-size:11px;color:#8a8276;margin-top:2px;font-family:ui-monospace,Consolas,Menlo,monospace}
-.lv-lock{flex:none;width:26px;height:26px;color:#b3aa9c}
-.lv-card.locked{background:#eeebe3;border-color:#e0dcd2;cursor:not-allowed}
-.lv-card.locked .lv-num{background:#c9c2b4;color:#f4f1ea}
-.lv-card.locked .lv-name,.lv-card.locked .lv-meta{color:#b3aa9c}
-.lv-card.done .lv-num{background:#30a46c}
-.lv-pass{flex:none;font-size:11px;color:#30a46c;font-weight:700;letter-spacing:.06em}
+/* 当前关：白底红圈放大 + 呼吸脉冲 + 行动胶囊 */
+.lv-node.cur{
+  width:64px;height:64px;font-size:21px;background:#fff;color:#e5484d;
+  box-shadow:0 0 0 3px #e5484d,0 0 0 10px rgba(229,72,77,.15),0 4px 10px rgba(28,27,26,.25);
+  animation:nodePulse 1.6s ease-in-out infinite;
+}
+@keyframes nodePulse{
+  0%,100%{box-shadow:0 0 0 3px #e5484d,0 0 0 10px rgba(229,72,77,.15),0 4px 10px rgba(28,27,26,.25)}
+  50%{box-shadow:0 0 0 3px #e5484d,0 0 0 16px rgba(229,72,77,.07),0 4px 10px rgba(28,27,26,.25)}
+}
+.lv-node.cur .go{
+  position:absolute;bottom:-40px;left:50%;transform:translateX(-50%);
+  background:#e5484d;color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;
+  padding:5px 14px;border-radius:999px;white-space:nowrap;
+  box-shadow:0 2px 6px rgba(229,72,77,.4);
+}
+/* 未解锁：灰底锁图标 */
+.lv-node.lock{background:#c9c2b4;color:#f4f1ea;cursor:not-allowed;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+.lv-node.lock svg{width:18px;height:18px;color:#f4f1ea}
+.lv-node.lock .node-lv{color:#b3aa9c}
+@media (max-width:340px){.lv-node{margin-left:10%!important;margin-right:10%!important}}
 
 /* ---------- 顶部计分面板：深色半透明仪表牌 ---------- */
 .hud{
@@ -189,7 +226,7 @@ body{
 /* ---------- 炸弹方块外观：保留原色参与匹配，叠加用户萌版炸弹图标 ---------- */
 .face.bomb::after{
   content:'';position:absolute;left:50%;top:50%;width:82%;height:82%;
-  transform:translate(-50%,-50%);background-image:url(bomb.png?v=0.4.6);background-position:center;background-size:contain;background-repeat:no-repeat;
+  transform:translate(-50%,-50%);background-image:url(bomb.png?v=0.5.0);background-position:center;background-size:contain;background-repeat:no-repeat;
   filter:drop-shadow(0 1.5px 3px rgba(0,0,0,.35));
 }
 
@@ -222,6 +259,16 @@ body{
 .ov-title.win{color:#30a46c}
 .ov-title.lose{color:#e5484d}
 .ov-data{font-size:14px;color:#7d766c;margin:12px 0 20px;font-family:ui-monospace,Consolas,Menlo,monospace;line-height:1.9}
+/* 结算星级（v0.5.0）：依次弹入 */
+.ov-stars{margin:16px 0 0;font-size:34px;letter-spacing:14px;text-indent:14px;line-height:1}
+.ov-stars .st-item{font-style:normal;display:inline-block}
+.ov-stars .on{color:#ffb224;text-shadow:0 2px 6px rgba(255,178,36,.45)}
+.ov-stars .off{color:#d9d3c7}
+@keyframes stPop{
+  0%{transform:scale(0) rotate(-30deg);opacity:0}
+  100%{transform:scale(1) rotate(0);opacity:1}
+}
+.ov-star-line{color:#8a8276;font-family:inherit}
 
 /* ---------- 轻提示（死局重排等） ---------- */
 #toast{
@@ -254,8 +301,14 @@ body{
 
   <!-- ================= 关卡选择场景 ================= -->
   <section id="scr-levels" class="screen">
-    <h2 class="ls-title">选择关卡</h2>
-    <div id="levelList"></div>
+    <div class="map-head">
+      <span class="map-head-t">选择关卡</span>
+      <span class="map-head-stars"><i class="mh-star">★</i><b id="totalStars">0</b><span>/</span><span id="maxStars">300</span></span>
+    </div>
+    <div id="mapScroll">
+      <div id="mapTrail"></div>
+      <div id="levelList"></div>
+    </div>
     <button id="backCover" type="button" class="ghost-btn">← 返回封面</button>
   </section>
 
@@ -290,6 +343,7 @@ body{
   <div class="ov-card">
     <button id="ovClose" type="button" class="ov-x" aria-label="关闭">✕</button>
     <div class="ov-title" id="ovTitle">过关啦！</div>
+    <div class="ov-stars" id="ovStars" hidden><i>★</i><i>★</i><i>★</i></div>
     <div class="ov-data" id="ovData"></div>
     <button id="ovNext" type="button" class="primary-btn">进入下一关</button>
     <button id="ovRetry" type="button" class="ghost-btn">再试一次</button>
@@ -308,7 +362,7 @@ body{
 /* 版本更新检查：version.json 带缓存穿透参数拉取（Pages 对它也是 max-age=600，
    但加时间戳后每次都绕过本地缓存）；发现版本变化自动强刷一次，玩家无需手动刷新 */
 (function () {
-  var VER = '0.4.6';
+  var VER = '0.5.0';
   try {
     var seen = localStorage.getItem('hongyu_ver');
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -387,13 +441,14 @@ let gen = 0;          // 局代号：重开时 +1，用于中止进行中的异�
 let tileSize = 0;     // 单个方块边长（px），由 layout() 按屏宽计算
 
 /* ---------------- 关卡进度状态 ---------------- */
-let progress = { unlocked: 1 };  // 已解锁关数（1~5），localStorage 持久化
+let progress = { unlocked: 1, stars: {} };  // 已解锁关数 + 每关星级（stars[关卡号1-based]=1~3），localStorage 持久化
 let curLevel = 0;                // 当前关（0-based）
 let timeLeft = 0;                // 剩余秒数
 let movesLeft = 0;               // 剩余步数
 let timeUp = false;              // 时间到标记（结算完成后判定失败用）
 let levelOver = false;           // 本关已结束（胜利/失败后锁输入）
 let timerId = null;              // 倒计时定时器
+let starsEarned = 0;             // 本关获得星级（endLevel 胜利时算出，供结算浮层展示）
 
 /* ---------------- DOM 引用 ---------------- */
 const $ = (id) => document.getElementById(id);
@@ -403,6 +458,7 @@ const timeEl = $('time'), movesEl = $('moves'), lvnumEl = $('lvnum');
 const hudBarEl = $('hudBar');
 const toastEl = $('toast');
 const overlay = $('overlay'), ovTitle = $('ovTitle'), ovData = $('ovData');
+const ovStars = $('ovStars');    // 结算浮层星级容器（v0.5.0）
 const ovNext = $('ovNext'), ovRetry = $('ovRetry'), ovClose = $('ovClose');
 const levelList = $('levelList');
 const bgmAudio = $('bgmFile');
@@ -589,11 +645,51 @@ const SAVE_KEY = 'hongyu_match3_progress_v1';
 function loadProgress() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) { const p = JSON.parse(raw); if (p && p.unlocked >= 1) progress.unlocked = Math.min(LEVEL_COUNT, Math.max(1, p.unlocked)); }
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.unlocked >= 1) {
+        progress.unlocked = Math.min(LEVEL_COUNT, Math.max(1, p.unlocked));
+        /* 星级存档兼容：旧档无 stars 字段自动补空表；只收 1~100 关的合法值（1~3 星） */
+        if (p.stars && typeof p.stars === 'object') {
+          for (let k = 1; k <= LEVEL_COUNT; k++) {
+            const v = p.stars[k] | 0;
+            if (v >= 1 && v <= 3) progress.stars[k] = v;
+          }
+        }
+      }
+    }
   } catch (e) {}
 }
 function saveProgress() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch (e) {}
+}
+
+/* ============================================================
+ * 二·五、星级系统（v0.5.0）：通关条件不变，星评「打得多高效」
+ *   ★1 = 达到目标分通关
+ *   ★2 = 通关时剩余步数 ≥ 总步数 × 25%
+ *   ★3 = 通关时剩余步数 ≥ 总步数 × 50%
+ * 时间不参与星级（倒计时是思考预算，惩罚稳健玩家不合理）。
+ * 星级只升不降：重打已通关卡取历史最高。 */
+const STAR2_RATIO = 0.25, STAR3_RATIO = 0.5;
+function calcStars(left) {
+  const total = LEVELS[curLevel].moves;
+  if (left >= total * STAR3_RATIO) return 3;
+  if (left >= total * STAR2_RATIO) return 2;
+  return 1;
+}
+/* 记录本关星级（只升不降），返回是否刷新纪录 */
+function recordStars(s) {
+  const key = curLevel + 1;
+  const old = progress.stars[key] | 0;
+  if (s > old) { progress.stars[key] = s; return true; }
+  return false;
+}
+/* 全图总星数（列表顶部 ★N/300） */
+function totalStars() {
+  let sum = 0;
+  for (const k in progress.stars) sum += progress.stars[k] | 0;
+  return sum;
 }
 
 /* ============================================================
@@ -603,26 +699,49 @@ function showScreen(name) {
   ['cover', 'levels', 'game'].forEach((s) => $('scr-' + s).classList.toggle('on', s === name));
 }
 
-/* 渲染关卡列表：已通关绿色勾、已解锁可点、未解锁置灰+锁图标 */
+/* 渲染关卡地图（v0.5.0 重写）：竖向闯关小径 + 左右交错节点。
+ * 节点三态：已通关=红色渐变圆+星级挂载下方；当前关=白底红圈放大+脉冲+行动胶囊；未解锁=灰底锁。
+ * 顶部总星数条 ★N/300；打开自动定位到当前关。 */
 function renderLevels() {
+  $('totalStars').textContent = totalStars();
+  $('maxStars').textContent = LEVELS.length * 3;
   levelList.innerHTML = '';
+  let curNode = null;
   LEVELS.forEach((lv, i) => {
-    const unlocked = i + 1 <= progress.unlocked;
-    const cleared = i + 1 < progress.unlocked;   // 解锁数大于本关序号 = 已通关
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'lv-card' + (unlocked ? '' : ' locked') + (cleared ? ' done' : '');
-    btn.innerHTML =
-      '<span class="lv-num">' + (i + 1) + '</span>' +
-      '<span class="lv-info">' +
-        '<span class="lv-name">第 ' + (i + 1) + ' 关</span>' +
-        '<span class="lv-meta">目标 ' + lv.target + ' 分</span>' +
-      '</span>' +
-      (cleared ? '<span class="lv-pass">已通关</span>' : '') +
-      (unlocked ? '' : '<svg class="lv-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>');
-    if (unlocked) btn.addEventListener('click', () => { initAudio(); preloadBackgrounds(); startLevel(i); });
-    levelList.appendChild(btn);
+    const num = i + 1;
+    const unlocked = num <= progress.unlocked;
+    const cleared = num < progress.unlocked;      // 解锁数大于本关序号 = 已通关
+    const cur = num === progress.unlocked;        // 当前待攻关（最高解锁且未显示已通关的第 100 关可重打刷星）
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = 'lv-node' + (cleared ? ' done' : '') + (cur ? ' cur' : '') + (!unlocked ? ' lock' : '');
+    /* 左右交错挂在中央小径两侧（参考藤蔓闯关图的空间结构） */
+    node.style.alignSelf = (i % 2 === 0) ? 'flex-start' : 'flex-end';
+    if (i % 2 === 0) node.style.marginLeft = '17%'; else node.style.marginRight = '17%';
+    let inner = '<span class="node-lv">第 ' + num + ' 关</span><span class="node-num">' + num + '</span>';
+    if (cleared) {
+      const st = progress.stars[num] | 0;
+      let stars = '';
+      for (let s = 1; s <= 3; s++) stars += '<i class="' + (s <= st ? 'on' : 'off') + '">★</i>';
+      inner += '<span class="node-stars">' + stars + '</span>';
+    }
+    if (cur) inner += '<span class="go">闯第 ' + num + ' 关</span>';
+    if (!unlocked) inner += '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="1.5" fill="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>';
+    node.innerHTML = inner;
+    if (unlocked) node.addEventListener('click', () => { initAudio(); preloadBackgrounds(); startLevel(i); });
+    levelList.appendChild(node);
+    if (cur) curNode = node;
   });
+  /* 自动定位：当前关滚到视口上 1/3 处。
+   * rAF + setTimeout 双保险：页面被遮挡（微信 WebView 切后台等）时 rAF 可能被丢弃不触发 */
+  const scrollToCur = () => {
+    const sc = $('mapScroll');
+    if (!sc) return;
+    if (curNode) sc.scrollTop = Math.max(0, curNode.offsetTop - sc.clientHeight * 0.35);
+    else sc.scrollTop = sc.scrollHeight;   // 全图通关：滚到底部
+  };
+  requestAnimationFrame(scrollToCur);
+  setTimeout(scrollToCur, 160);
 }
 
 /* ============================================================
@@ -700,6 +819,8 @@ function endLevel(win) {
     sfx.win();
     playVoiceLine('voice-win.mp3');    // 人声「完美」叠加在胜利琶音上
     progress.unlocked = Math.max(progress.unlocked, Math.min(LEVELS.length, curLevel + 2)); // 解锁下一关（上限 100）
+    starsEarned = calcStars(movesLeft);   // 星级：按通关剩余步数划档（25%/50%）
+    recordStars(starsEarned);             // 只升不降写入存档
     saveProgress();
   } else {
     sfx.fail();
@@ -716,6 +837,21 @@ function showOverlay(win) {
   ovTitle.className = 'ov-title ' + (win ? 'win' : 'lose');
   ovData.innerHTML = '第 ' + (curLevel + 1) + ' 关 · 得分 ' + score + ' / 目标 ' + lv.target +
     '<br>剩余 ' + timeLeft + ' 秒 · 剩余 ' + movesLeft + ' 步';
+  /* 星级揭示（v0.5.0）：依次弹入，未得的灰星占位；失败不显示 */
+  if (win) {
+    ovStars.hidden = false;
+    ovStars.querySelectorAll('i').forEach((el, i) => {
+      el.className = 'st-item ' + (i < starsEarned ? 'on' : 'off');
+      el.style.animation = 'none';
+      void el.offsetWidth;   // 重启动画
+      el.style.animation = 'stPop .34s cubic-bezier(.34,1.56,.64,1) ' + (0.35 + i * 0.28).toFixed(2) + 's both';
+    });
+    ovData.insertAdjacentHTML('beforeend', '<br><span class="ov-star-line">' +
+      (starsEarned >= 3 ? '大师通关 · 剩余步数过半' : starsEarned === 2 ? '高效通关 · 剩余步数 ≥ 25%' : '达标通关 · 再省步数可升星') +
+      '</span>');
+  } else {
+    ovStars.hidden = true;
+  }
   const hasNext = win && curLevel + 1 < LEVELS.length;
   ovNext.style.display = hasNext ? '' : 'none';
   ovNext.textContent = hasNext ? '进入下一关（第 ' + (curLevel + 2) + ' 关）' : '进入下一关';
